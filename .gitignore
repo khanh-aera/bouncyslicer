@@ -1,0 +1,8 @@
+__pycache__/
+.DS_Store
+*.gcode
+*.stl
+*.png
+diagnose_*.py
+visualize_*.py
+debug.html

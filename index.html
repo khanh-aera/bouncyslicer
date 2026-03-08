@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bouncy Slicer</title>
+<style>
+:root {
+  --bg: #1a1b26;
+  --surface: #24283b;
+  --surface2: #2f3349;
+  --border: #3b4261;
+  --text: #c0caf5;
+  --text-dim: #565f89;
+  --accent: #7aa2f7;
+  --green: #9ece6a;
+  --red: #f7768e;
+  --yellow: #e0af68;
+  --orange: #ff9e64;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+}
+#app-header {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  gap: 12px;
+}
+#app-header h1 { font-size: 16px; font-weight: 600; }
+#app-header .subtitle { color: var(--text-dim); font-size: 12px; }
+#app-header .spacer { flex: 1; }
+#download-btn {
+  padding: 6px 14px;
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+#download-btn:disabled { opacity: 0.35; cursor: default; }
+#download-btn:not(:disabled):hover { filter: brightness(1.15); }
+
+main { display: flex; flex: 1; overflow: hidden; min-height: 0; }
+
+/* Sidebar */
+#sidebar {
+  width: 300px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+#sidebar > * { flex-shrink: 0; }
+#sidebar::-webkit-scrollbar { width: 6px; }
+#sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+details { background: var(--surface2); border-radius: 6px; overflow: hidden; }
+summary {
+  padding: 8px 12px;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+}
+summary::-webkit-details-marker { display: none; }
+summary::before {
+  content: '\25b6';
+  display: inline-block;
+  margin-right: 6px;
+  font-size: 9px;
+  transition: transform 0.15s;
+}
+details[open] > summary::before { transform: rotate(90deg); }
+.params { padding: 4px 12px 12px; display: flex; flex-direction: column; gap: 6px; }
+.param { display: flex; flex-direction: column; gap: 2px; }
+.param label { font-size: 11px; color: var(--text-dim); }
+.range-row { display: flex; gap: 8px; align-items: center; }
+.range-row input[type="range"] { flex: 1; }
+.range-row input[type="number"] { width: 60px; }
+
+input[type="number"], select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 13px;
+  font-family: inherit;
+}
+input[type="number"]:focus, select:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+select { cursor: pointer; }
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--border);
+  height: 4px;
+  border-radius: 2px;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+  cursor: pointer;
+}
+
+/* STL controls */
+.stl-row { display: flex; gap: 6px; align-items: center; }
+.stl-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: var(--bg);
+  border-radius: 4px;
+  font-size: 12px;
+  flex: 1;
+  min-width: 0;
+}
+.stl-info span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.icon-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 4px;
+  line-height: 1;
+}
+.icon-btn:hover { color: var(--red); }
+.secondary-btn {
+  padding: 4px 10px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.secondary-btn:hover { border-color: var(--accent); }
+
+/* Generate button */
+#generate-btn {
+  padding: 10px;
+  background: var(--green);
+  color: var(--bg);
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: filter 0.15s;
+}
+#generate-btn:disabled { opacity: 0.4; cursor: default; }
+#generate-btn:not(:disabled):hover { filter: brightness(1.1); }
+
+/* Stats */
+#stats { display: none; margin-top: 4px; padding: 8px; background: var(--surface2); border-radius: 6px; }
+.stat-row { display: flex; justify-content: space-between; padding: 2px 0; font-size: 12px; }
+.stat-row .label { color: var(--text-dim); }
+.stat-row .value { font-weight: 500; }
+.descent-warn { color: var(--orange); font-weight: 700; }
+.descent-danger { color: var(--red); font-weight: 700; }
+
+/* Viewport */
+#viewport {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg);
+}
+#canvas { display: block; width: 100%; height: 100%; }
+
+/* Viewport controls */
+#viewport-controls {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  pointer-events: none;
+}
+#viewport-controls > * { pointer-events: auto; }
+#viewport-controls label {
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  background: rgba(26,27,38,0.7);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+#layer-slider-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(26,27,38,0.7);
+  padding: 4px 10px;
+  border-radius: 4px;
+  visibility: hidden;
+}
+#layer-slider-wrap.visible { visibility: visible; }
+#layer-slider { flex: 1; }
+#layer-label { font-size: 11px; color: var(--text-dim); white-space: nowrap; min-width: 80px; }
+
+/* Overlays */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(26, 27, 38, 0.92);
+  backdrop-filter: blur(4px);
+  transition: opacity 0.3s;
+}
+.overlay.viewport-only {
+  position: absolute;
+  z-index: 10;
+  background: rgba(26, 27, 38, 0.8);
+}
+.overlay.hidden { opacity: 0; pointer-events: none; }
+.overlay-content { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.overlay-content p { color: var(--text-dim); font-size: 14px; }
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.drop-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: rgba(122, 162, 247, 0.12);
+  border: 2px dashed var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.drop-overlay.hidden { display: none; }
+.drop-overlay p { font-size: 18px; font-weight: 600; color: var(--accent); }
+
+/* Compact param grid for print settings */
+.param-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.param-grid .param { min-width: 0; }
+.param-grid input[type="number"] { width: 100%; }
+
+/* G-code textareas */
+textarea.gcode-input {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+  resize: vertical;
+  width: 100%;
+  line-height: 1.4;
+}
+textarea.gcode-input:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+
+/* G-code help */
+.gcode-help { font-size: 11px; color: var(--text-dim); line-height: 1.5; }
+.gcode-help summary {
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 500;
+  color: var(--accent);
+  padding: 4px 0;
+}
+.gcode-help summary::before { content: none; }
+.gcode-help .help-body { padding: 4px 0 2px; }
+.gcode-help h4 { font-size: 11px; color: var(--text); margin: 6px 0 2px; font-weight: 600; }
+.gcode-help h4:first-child { margin-top: 0; }
+.gcode-help ol, .gcode-help ul { padding-left: 16px; margin: 2px 0; }
+.gcode-help li { margin: 1px 0; }
+.gcode-help code { color: var(--yellow); font-size: 10px; }
+</style>
+</head>
+<body>
+  <header id="app-header">
+    <h1>Bouncy Slicer</h1>
+    <span class="subtitle">Arch Vase Mode</span>
+    <span class="spacer"></span>
+    <button id="download-btn" disabled>Download G-code</button>
+  </header>
+
+  <main>
+    <aside id="sidebar">
+      <!-- Shape & Geometry -->
+      <details open>
+        <summary>Shape</summary>
+        <div class="params">
+          <div class="param">
+            <label>Shape</label>
+            <select id="shape">
+              <option value="cylinder">Cylinder</option>
+              <option value="box">Rectangular Prism</option>
+              <option value="pentagon">Pentagon</option>
+              <option value="hexagon">Hexagon</option>
+              <option value="polygon">Polygon</option>
+            </select>
+          </div>
+          <div class="param">
+            <label>STL File</label>
+            <div class="stl-row">
+              <input type="file" id="stl-file" accept=".stl" style="display:none">
+              <button id="stl-upload-btn" class="secondary-btn">Upload STL</button>
+              <div id="stl-info" class="stl-info" style="display:none">
+                <span id="stl-name"></span>
+                <button id="stl-clear-btn" class="icon-btn">&times;</button>
+              </div>
+            </div>
+          </div>
+          <div class="param" id="radius-group">
+            <label>Radius (mm)</label>
+            <div class="range-row">
+              <input type="range" id="radius_range" min="5" max="100" step="0.5" value="25">
+              <input type="number" id="radius" min="5" max="100" step="0.5" value="25">
+            </div>
+          </div>
+          <div class="param" id="side-group" style="display:none">
+            <label>Side Length (mm)</label>
+            <div class="range-row">
+              <input type="range" id="side_range" min="5" max="150" step="0.5" value="50">
+              <input type="number" id="side" min="5" max="150" step="0.5" value="50">
+            </div>
+          </div>
+          <div class="param" id="circumradius-group" style="display:none">
+            <label>Circumradius (mm)</label>
+            <div class="range-row">
+              <input type="range" id="circumradius_range" min="5" max="100" step="0.5" value="25">
+              <input type="number" id="circumradius" min="5" max="100" step="0.5" value="25">
+            </div>
+          </div>
+          <div class="param" id="polygon-sides-group" style="display:none">
+            <label>Polygon Sides</label>
+            <div class="range-row">
+              <input type="range" id="polygon_sides_range" min="3" max="24" step="1" value="6">
+              <input type="number" id="polygon_sides" min="3" max="24" step="1" value="6">
+            </div>
+          </div>
+          <div class="param" id="stl-scale-group" style="display:none">
+            <label>STL Scale Factor</label>
+            <div class="range-row">
+              <input type="range" id="stl_scale_range" min="0.1" max="5" step="0.01" value="1">
+              <input type="number" id="stl_scale" min="0.01" max="100" step="0.01" value="1">
+            </div>
+          </div>
+          <div class="param" id="height-group">
+            <label>Height (mm)</label>
+            <div class="range-row">
+              <input type="range" id="height_range" min="10" max="300" step="1" value="100">
+              <input type="number" id="height" min="10" max="300" step="1" value="100">
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <!-- Scale Parameters -->
+      <details open>
+        <summary>Arch Parameters</summary>
+        <div class="params">
+          <div class="param">
+            <label>Num Arches</label>
+            <div class="range-row">
+              <input type="range" id="num_arches_range" min="3" max="64" step="1" value="12">
+              <input type="number" id="num_arches" min="3" max="64" step="1" value="12">
+            </div>
+          </div>
+          <div class="param">
+            <label>Arch Layer Height (mm)</label>
+            <div class="range-row">
+              <input type="range" id="arch_layer_height_range" min="1" max="20" step="0.5" value="8">
+              <input type="number" id="arch_layer_height" min="1" max="20" step="0.5" value="8">
+            </div>
+          </div>
+          <div class="param">
+            <label>Segments per Arc</label>
+            <div class="range-row">
+              <input type="range" id="segments_per_arc_range" min="5" max="60" step="1" value="20">
+              <input type="number" id="segments_per_arc" min="5" max="60" step="1" value="20">
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <!-- Print Settings -->
+      <details>
+        <summary>Print Settings</summary>
+        <div class="params">
+          <div class="param-grid">
+            <div class="param"><label>Nozzle (mm)</label><input type="number" id="nozzle_diameter" value="0.4" step="0.05" min="0.1" max="1.2"></div>
+            <div class="param"><label>Filament (mm)</label><input type="number" id="filament_diameter" value="1.75" step="0.05" min="1" max="3"></div>
+            <div class="param"><label>Bead H (mm)</label><input type="number" id="bead_height" value="0.3" step="0.05" min="0.05" max="1"></div>
+            <div class="param"><label>Print (mm/min)</label><input type="number" id="print_speed" value="1800" step="60" min="300" max="6000"></div>
+            <div class="param"><label>1st Layer (mm/min)</label><input type="number" id="first_layer_speed" value="900" step="60" min="300" max="3000"></div>
+            <div class="param"><label>Travel (mm/min)</label><input type="number" id="travel_speed" value="7200" step="60" min="1200" max="18000"></div>
+            <div class="param"><label>Retract (mm)</label><input type="number" id="retract_distance" value="0.8" step="0.1" min="0" max="5"></div>
+            <div class="param"><label>Retract Spd</label><input type="number" id="retract_speed" value="2400" step="60" min="600" max="6000"></div>
+            <div class="param"><label>Z-Hop (mm)</label><input type="number" id="z_hop" value="2" step="0.5" min="0" max="10"></div>
+          </div>
+        </div>
+      </details>
+
+      <!-- Temperature -->
+      <details>
+        <summary>Temperature</summary>
+        <div class="params">
+          <div class="param-grid">
+            <div class="param"><label>Bed Temp (&deg;C)</label><input type="number" id="bed_temp" value="60" step="5" min="0" max="120"></div>
+            <div class="param"><label>Hotend (&deg;C)</label><input type="number" id="hotend_temp" value="210" step="5" min="150" max="300"></div>
+          </div>
+        </div>
+      </details>
+
+      <!-- Bed & Bottom -->
+      <details>
+        <summary>Bed, Bottom &amp; Top</summary>
+        <div class="params">
+          <div class="param-grid">
+            <div class="param"><label>Bed X (mm)</label><input type="number" id="bed_x" value="250" step="1" min="50" max="500"></div>
+            <div class="param"><label>Bed Y (mm)</label><input type="number" id="bed_y" value="210" step="1" min="50" max="500"></div>
+            <div class="param"><label>Bottom Layers</label><input type="number" id="bottom_layers" value="3" step="1" min="0" max="10"></div>
+            <div class="param"><label>Bottom H (mm)</label><input type="number" id="bottom_layer_height" value="0.2" step="0.05" min="0.05" max="0.5"></div>
+            <div class="param"><label>Top Layers</label><input type="number" id="top_layers" value="0" step="1" min="0" max="10"></div>
+            <div class="param"><label>Top H (mm)</label><input type="number" id="top_layer_height" value="0.3" step="0.05" min="0.05" max="0.5"></div>
+          </div>
+        </div>
+      </details>
+
+      <!-- Custom G-code -->
+      <details>
+        <summary>Custom G-code</summary>
+        <div class="params">
+          <div class="param">
+            <label>Start G-code</label>
+            <textarea id="start_gcode" class="gcode-input" rows="8" spellcheck="false">G90 ; absolute positioning
+M82 ; absolute extrusion
+M107 ; fan off during warmup
+M104 S{hotend_temp} ; set hotend temp
+M140 S{bed_temp} ; set bed temp
+M190 S{bed_temp} ; wait for bed
+M109 S{hotend_temp} ; wait for hotend
+G28 ; home all axes
+G21 ; mm units
+G92 E0 ; reset extruder</textarea>
+          </div>
+          <div class="param">
+            <label>End G-code</label>
+            <textarea id="end_gcode" class="gcode-input" rows="6" spellcheck="false">M104 S0 ; hotend off
+M140 S0 ; bed off
+M107 ; fan off
+G91 ; relative positioning
+G0 Z10 F3000 ; lift nozzle
+G90 ; absolute positioning
+G0 X0 Y{bed_y} F{travel_speed} ; present part
+M84 ; disable steppers</textarea>
+          </div>
+          <div class="gcode-help">
+            <details>
+              <summary>How to use this</summary>
+              <div class="help-body">
+                <p>Paste your printer's start/end G-code here for bed leveling, purge lines, and other printer-specific routines. The defaults work for basic printers but your slicer's version will be better.</p>
+
+                <h4>Variables</h4>
+                <p>Use these placeholders &mdash; they get replaced with your settings:<br>
+                <code>{bed_temp}</code> <code>{hotend_temp}</code> <code>{bed_x}</code> <code>{bed_y}</code> <code>{travel_speed}</code> <code>{nozzle_diameter}</code> <code>{filament_diameter}</code></p>
+
+                <h4>Where to find it</h4>
+                <ul>
+                  <li><b>PrusaSlicer / OrcaSlicer</b> &mdash; Printer Settings &gt; Custom G-code. Copy "Start G-code" and "End G-code". Replace temperature placeholders: <code>[first_layer_temperature]</code> &rarr; <code>{hotend_temp}</code>, <code>[first_layer_bed_temperature]</code> &rarr; <code>{bed_temp}</code></li>
+                  <li><b>Cura</b> &mdash; Preferences &gt; Printers &gt; Machine Settings. Copy "Start G-code" and "End G-code". Replace: <code>{material_print_temperature}</code> &rarr; <code>{hotend_temp}</code>, <code>{material_bed_temperature}</code> &rarr; <code>{bed_temp}</code></li>
+                  <li><b>Bambu Studio</b> &mdash; Printer tab &gt; Machine G-code. Same as PrusaSlicer placeholders.</li>
+                </ul>
+
+                <h4>Common additions</h4>
+                <ul>
+                  <li><code>G29</code> &mdash; auto bed leveling (add after <code>G28</code>)</li>
+                  <li><code>BED_MESH_CALIBRATE</code> &mdash; Klipper mesh leveling</li>
+                  <li><code>PRINT_START</code> / <code>PRINT_END</code> &mdash; Klipper macros</li>
+                  <li>Purge line &mdash; usually a few G1 moves near bed edge</li>
+                </ul>
+              </div>
+            </details>
+          </div>
+        </div>
+      </details>
+
+      <button id="generate-btn" disabled>Generate</button>
+
+      <div id="stats">
+        <div class="stat-row"><span class="label">Shape</span><span class="value" id="stat-shape">-</span></div>
+        <div class="stat-row"><span class="label">Filament</span><span class="value" id="stat-filament">-</span></div>
+        <div class="stat-row"><span class="label">G-code Lines</span><span class="value" id="stat-lines">-</span></div>
+        <div class="stat-row"><span class="label">Layers</span><span class="value" id="stat-layers">-</span></div>
+        <div class="stat-row"><span class="label">Max Descent</span><span class="value" id="stat-descent">-</span></div>
+        <div class="stat-row"><span class="label">Nozzle Angle</span><span class="value" id="stat-nozzle">-</span></div>
+        <div class="stat-row"><span class="label">Gen Time</span><span class="value" id="stat-time">-</span></div>
+      </div>
+    </aside>
+
+    <div id="viewport">
+      <canvas id="canvas"></canvas>
+
+      <div id="viewport-controls">
+        <label><input type="checkbox" id="show-travel"> Travel</label>
+        <div id="layer-slider-wrap">
+          <span style="font-size:11px;color:var(--text-dim)">Layer</span>
+          <input type="range" id="layer-slider" min="0" max="0" value="0">
+          <span id="layer-label">-</span>
+        </div>
+      </div>
+
+      <div id="loading-overlay" class="overlay">
+        <div class="overlay-content">
+          <div class="spinner"></div>
+          <p id="loading-message">Loading Python runtime...</p>
+        </div>
+      </div>
+
+      <div id="generating-overlay" class="overlay viewport-only hidden">
+        <div class="overlay-content">
+          <div class="spinner"></div>
+          <p>Generating G-code...</p>
+          <p id="gen-timer">0.0s</p>
+        </div>
+      </div>
+
+      <div id="drop-overlay" class="drop-overlay hidden">
+        <p>Drop STL file here</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Worker code (not parsed as JS by the browser) -->
+  <script type="text/worker" id="worker-code">
+let pyodide = null;
+
+self.onmessage = async function(e) {
+  const msg = e.data;
+
+  if (msg.type === 'init') {
+    try {
+      self.postMessage({ type: 'status', phase: 'loading', message: 'Loading Python runtime...' });
+      importScripts('https://cdn.jsdelivr.net/pyodide/v0.27.2/full/pyodide.js');
+      pyodide = await loadPyodide({
+        indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.27.2/full/'
+      });
+      self.postMessage({ type: 'status', phase: 'loading', message: 'Loading slicer...' });
+      pyodide.FS.writeFile('/bouncy_slicer.py', msg.slicerCode);
+      pyodide.runPython("import sys; sys.path.insert(0, '/')");
+      pyodide.runPython("import bouncy_slicer as _bs_mod");
+      self.postMessage({ type: 'ready' });
+    } catch (err) {
+      self.postMessage({ type: 'error', message: 'Failed to load Pyodide: ' + err.message });
+    }
+    return;
+  }
+
+  if (msg.type === 'generate') {
+    try {
+      const params = Object.assign({}, msg.params);
+
+      if (params.stlData) {
+        const data = new Uint8Array(params.stlData);
+        pyodide.FS.writeFile('/upload.stl', data);
+        delete params.stlData;
+      }
+
+      self.postMessage({ type: 'status', phase: 'generating', message: 'Generating G-code...' });
+
+      pyodide.globals.set('_params_json', JSON.stringify(params));
+
+      pyodide.runPython(`
+import types, json, time
+import bouncy_slicer as bs
+
+bs.clear_caches()
+
+_p = json.loads(_params_json)
+_p.pop('stlData', None)
+args = types.SimpleNamespace(**_p)
+
+if _p.get('stl'):
+    args.stl = '/upload.stl'
+else:
+    args.stl = None
+
+if args.height is None and not args.stl:
+    args.height = 100.0
+
+t0 = time.time()
+shape = bs.build_shape(args)
+slicer = bs.BouncySlicer(shape, args)
+_result_gcode = slicer.generate()
+gen_time = time.time() - t0
+
+start_z = args.bottom_layers * args.bottom_layer_height
+n_layers = max(1, int((shape.max_height() - start_z) / args.arch_layer_height))
+
+_result_stats = json.dumps({
+    'description': shape.describe(),
+    'filament_m': round(slicer.e_total / 1000, 2),
+    'gcode_lines': len(slicer.lines),
+    'max_descent_deg': round(slicer.max_descent_deg, 1),
+    'gen_time': round(gen_time, 1),
+    'num_layers': n_layers,
+})
+`);
+
+      const gcode = pyodide.globals.get('_result_gcode');
+      const stats = JSON.parse(pyodide.globals.get('_result_stats'));
+      self.postMessage({ type: 'result', gcode: gcode, stats: stats });
+    } catch (err) {
+      self.postMessage({ type: 'error', message: '' + err });
+    }
+    return;
+  }
+};
+  </script>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ── Three.js Setup ──────────────────────────────────────────────
+
+const viewportEl = document.getElementById('viewport');
+const canvas = document.getElementById('canvas');
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a1b26);
+
+const camera = new THREE.PerspectiveCamera(50, viewportEl.clientWidth / viewportEl.clientHeight, 0.1, 10000);
+camera.position.set(80, 120, 180);
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setSize(viewportEl.clientWidth, viewportEl.clientHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.target.set(0, 40, 0);
+
+// Grid
+const grid = new THREE.GridHelper(250, 25, 0x3b4261, 0x2a2e42);
+scene.add(grid);
+
+// State
+let extrusionMesh = null;
+let travelMesh = null;
+let layerBreaks = [];
+let travelLayerBreaks = [];
+let currentGcode = null;
+let stlFile = null;
+let stlArrayBuffer = null;
+
+// Animation loop
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+// Resize
+const ro = new ResizeObserver(() => {
+  const w = viewportEl.clientWidth;
+  const h = viewportEl.clientHeight;
+  if (w === 0 || h === 0) return;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+});
+ro.observe(viewportEl);
+
+// ── Gcode Parser ────────────────────────────────────────────────
+
+function hslToRgb(h, s, l) {
+  let r, g, b;
+  if (s === 0) { r = g = b = l; }
+  else {
+    const hue2rgb = (p, q, t) => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q - p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1/3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1/3);
+  }
+  return [r, g, b];
+}
+
+function parseGcode(text, bedX, bedY) {
+  const lines = text.split('\n');
+  const ox = bedX / 2, oy = bedY / 2;
+
+  const ext = { pos: [], col: [] };
+  const trav = { pos: [], col: [] };
+  const extBreaks = [0];
+  const travBreaks = [0];
+
+  let x = 0, y = 0, z = 0, e = 0;
+  let prevX = null, prevY = null, prevZ = null, prevE = 0;
+  let maxZ = 1;
+
+  // First pass: find max Z
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.charCodeAt(0) !== 71) continue; // 'G'
+    const zm = line.match(/Z([\d.]+)/);
+    if (zm) { const zv = parseFloat(zm[1]); if (zv > maxZ) maxZ = zv; }
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (line.startsWith(';LAYER_CHANGE')) {
+      extBreaks.push(ext.pos.length / 3);
+      travBreaks.push(trav.pos.length / 3);
+      continue;
+    }
+
+    const c0 = line.charCodeAt(0);
+    if (c0 !== 71) continue; // 'G'
+    const c1 = line.charCodeAt(1);
+    if (c1 !== 48 && c1 !== 49) continue; // '0' or '1'
+    const isG1 = c1 === 49;
+
+    const xm = line.match(/X([-\d.]+)/);
+    const ym = line.match(/Y([-\d.]+)/);
+    const zm = line.match(/Z([-\d.]+)/);
+    const em = line.match(/E([-\d.]+)/);
+
+    if (xm) x = parseFloat(xm[1]);
+    if (ym) y = parseFloat(ym[1]);
+    if (zm) z = parseFloat(zm[1]);
+    if (em) e = parseFloat(em[1]);
+
+    if (prevX !== null) {
+      const isExtrusion = isG1 && em && e > prevE;
+      const target = isExtrusion ? ext : trav;
+
+      // gcode X,Y,Z -> Three.js X, Y(up), Z
+      target.pos.push(
+        prevX - ox, prevZ, prevY - oy,
+        x - ox, z, y - oy
+      );
+
+      if (isExtrusion) {
+        const h1 = (1 - prevZ / maxZ) * 0.67;
+        const h2 = (1 - z / maxZ) * 0.67;
+        const c1 = hslToRgb(h1, 0.9, 0.55);
+        const c2 = hslToRgb(h2, 0.9, 0.55);
+        target.col.push(c1[0], c1[1], c1[2], c2[0], c2[1], c2[2]);
+      } else {
+        target.col.push(0.3, 0.3, 0.35, 0.3, 0.3, 0.35);
+      }
+    }
+
+    prevX = x; prevY = y; prevZ = z; prevE = e;
+  }
+
+  extBreaks.push(ext.pos.length / 3);
+  travBreaks.push(trav.pos.length / 3);
+
+  return { ext, trav, extBreaks, travBreaks, maxZ };
+}
+
+function renderGcodeToScene(parsed) {
+  // Clear old
+  if (extrusionMesh) { scene.remove(extrusionMesh); extrusionMesh.geometry.dispose(); extrusionMesh.material.dispose(); }
+  if (travelMesh) { scene.remove(travelMesh); travelMesh.geometry.dispose(); travelMesh.material.dispose(); }
+
+  // Extrusion
+  const extGeo = new THREE.BufferGeometry();
+  extGeo.setAttribute('position', new THREE.Float32BufferAttribute(parsed.ext.pos, 3));
+  extGeo.setAttribute('color', new THREE.Float32BufferAttribute(parsed.ext.col, 3));
+  const extMat = new THREE.LineBasicMaterial({ vertexColors: true });
+  extrusionMesh = new THREE.LineSegments(extGeo, extMat);
+  scene.add(extrusionMesh);
+
+  // Travel
+  const travGeo = new THREE.BufferGeometry();
+  travGeo.setAttribute('position', new THREE.Float32BufferAttribute(parsed.trav.pos, 3));
+  travGeo.setAttribute('color', new THREE.Float32BufferAttribute(parsed.trav.col, 3));
+  const travMat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.25 });
+  travelMesh = new THREE.LineSegments(travGeo, travMat);
+  travelMesh.visible = document.getElementById('show-travel').checked;
+  scene.add(travelMesh);
+
+  layerBreaks = parsed.extBreaks;
+  travelLayerBreaks = parsed.travBreaks;
+
+  // Layer slider
+  const numLayers = layerBreaks.length - 1;
+  const slider = document.getElementById('layer-slider');
+  slider.min = 0;
+  slider.max = numLayers - 1;
+  slider.value = numLayers - 1;
+  document.getElementById('layer-label').textContent = numLayers + ' / ' + numLayers;
+  document.getElementById('layer-slider-wrap').classList.add('visible');
+
+  // Auto-fit camera
+  extGeo.computeBoundingBox();
+  const box = extGeo.boundingBox;
+  if (box) {
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const dist = maxDim / (2 * Math.tan(camera.fov * Math.PI / 360)) * 1.5;
+    camera.position.set(center.x + dist * 0.4, center.y + dist * 0.5, center.z + dist * 0.8);
+    controls.target.copy(center);
+    controls.update();
+  }
+}
+
+// ── Layer slider ────────────────────────────────────────────────
+
+document.getElementById('layer-slider').addEventListener('input', function() {
+  const layer = parseInt(this.value);
+  const total = layerBreaks.length - 1;
+  if (extrusionMesh) {
+    const count = layerBreaks[Math.min(layer + 1, layerBreaks.length - 1)];
+    extrusionMesh.geometry.setDrawRange(0, count);
+  }
+  if (travelMesh) {
+    const count = travelLayerBreaks[Math.min(layer + 1, travelLayerBreaks.length - 1)];
+    travelMesh.geometry.setDrawRange(0, count);
+  }
+  document.getElementById('layer-label').textContent = (layer + 1) + ' / ' + total;
+});
+
+document.getElementById('show-travel').addEventListener('change', function() {
+  if (travelMesh) travelMesh.visible = this.checked;
+});
+
+// ── Worker Setup ────────────────────────────────────────────────
+
+const workerScript = document.getElementById('worker-code').textContent;
+const workerBlob = new Blob([workerScript], { type: 'application/javascript' });
+const worker = new Worker(URL.createObjectURL(workerBlob));
+
+const loadingOverlay = document.getElementById('loading-overlay');
+const loadingMsg = document.getElementById('loading-message');
+const genOverlay = document.getElementById('generating-overlay');
+const genBtn = document.getElementById('generate-btn');
+const dlBtn = document.getElementById('download-btn');
+
+let genTimer = null;
+let genStart = 0;
+
+worker.onmessage = function(e) {
+  const msg = e.data;
+  switch (msg.type) {
+    case 'status':
+      if (msg.phase === 'loading') loadingMsg.textContent = msg.message;
+      break;
+    case 'ready':
+      loadingOverlay.classList.add('hidden');
+      genBtn.disabled = false;
+      break;
+    case 'result':
+      clearInterval(genTimer);
+      genOverlay.classList.add('hidden');
+      genBtn.disabled = false;
+      currentGcode = msg.gcode;
+      updateStats(msg.stats);
+      const bedX = parseFloat(document.getElementById('bed_x').value);
+      const bedY = parseFloat(document.getElementById('bed_y').value);
+      const parsed = parseGcode(msg.gcode, bedX, bedY);
+      renderGcodeToScene(parsed);
+      dlBtn.disabled = false;
+      break;
+    case 'error':
+      clearInterval(genTimer);
+      genOverlay.classList.add('hidden');
+      genBtn.disabled = false;
+      alert('Error: ' + msg.message);
+      break;
+  }
+};
+
+// Fetch slicer code and send to worker
+fetch('bouncy_slicer.py').then(r => r.text()).then(code => {
+  worker.postMessage({ type: 'init', slicerCode: code });
+}).catch(() => {
+  loadingMsg.textContent = 'Cannot load bouncy_slicer.py. Serve files: python3 -m http.server';
+});
+
+// ── Generate ────────────────────────────────────────────────────
+
+function collectParams() {
+  const p = {
+    shape: document.getElementById('shape').value,
+    stl: null,
+    radius: parseFloat(document.getElementById('radius').value),
+    side: parseFloat(document.getElementById('side').value),
+    circumradius: parseFloat(document.getElementById('circumradius').value),
+    polygon_sides: parseInt(document.getElementById('polygon_sides').value),
+    height: parseFloat(document.getElementById('height').value) || null,
+    num_arches: parseInt(document.getElementById('num_arches').value),
+    arch_layer_height: parseFloat(document.getElementById('arch_layer_height').value),
+    segments_per_arc: parseInt(document.getElementById('segments_per_arc').value),
+    nozzle_diameter: parseFloat(document.getElementById('nozzle_diameter').value),
+    filament_diameter: parseFloat(document.getElementById('filament_diameter').value),
+    bead_height: parseFloat(document.getElementById('bead_height').value),
+    print_speed: parseFloat(document.getElementById('print_speed').value),
+    first_layer_speed: parseFloat(document.getElementById('first_layer_speed').value),
+    travel_speed: parseFloat(document.getElementById('travel_speed').value),
+    retract_distance: parseFloat(document.getElementById('retract_distance').value),
+    retract_speed: parseFloat(document.getElementById('retract_speed').value),
+    z_hop: parseFloat(document.getElementById('z_hop').value),
+    bed_temp: parseInt(document.getElementById('bed_temp').value),
+    hotend_temp: parseInt(document.getElementById('hotend_temp').value),
+    bed_x: parseFloat(document.getElementById('bed_x').value),
+    bed_y: parseFloat(document.getElementById('bed_y').value),
+    bottom_layers: parseInt(document.getElementById('bottom_layers').value),
+    bottom_layer_height: parseFloat(document.getElementById('bottom_layer_height').value),
+    top_layers: parseInt(document.getElementById('top_layers').value),
+    top_layer_height: parseFloat(document.getElementById('top_layer_height').value),
+    start_gcode: document.getElementById('start_gcode').value,
+    end_gcode: document.getElementById('end_gcode').value,
+  };
+
+  if (stlArrayBuffer) {
+    p.stl = true;
+    p.height = null;
+    p.stlData = stlArrayBuffer;
+    p.stl_scale = parseFloat(document.getElementById('stl_scale').value) || 1.0;
+  } else {
+    p.stl_scale = 1.0;
+  }
+
+  return p;
+}
+
+function generate() {
+  genBtn.disabled = true;
+  genOverlay.classList.remove('hidden');
+  genStart = performance.now();
+  document.getElementById('gen-timer').textContent = '0.0s';
+  genTimer = setInterval(() => {
+    document.getElementById('gen-timer').textContent =
+      ((performance.now() - genStart) / 1000).toFixed(1) + 's';
+  }, 100);
+
+  const params = collectParams();
+  worker.postMessage({ type: 'generate', params });
+}
+
+genBtn.addEventListener('click', generate);
+
+// ── Stats ───────────────────────────────────────────────────────
+
+function updateStats(s) {
+  document.getElementById('stats').style.display = 'block';
+  document.getElementById('stat-shape').textContent = s.description;
+  document.getElementById('stat-filament').textContent = s.filament_m + ' m';
+  document.getElementById('stat-lines').textContent = s.gcode_lines.toLocaleString();
+  document.getElementById('stat-layers').textContent = s.num_layers;
+  document.getElementById('stat-time').textContent = s.gen_time + 's';
+
+  const descEl = document.getElementById('stat-descent');
+  descEl.textContent = s.max_descent_deg + '\u00b0';
+  descEl.className = 'value';
+  if (s.max_descent_deg > 55) descEl.classList.add('descent-danger');
+  else if (s.max_descent_deg > 45) descEl.classList.add('descent-warn');
+
+  const nozzleAngle = (s.max_descent_deg * 2).toFixed(1);
+  const nozzleEl = document.getElementById('stat-nozzle');
+  nozzleEl.textContent = nozzleAngle + '\u00b0';
+  nozzleEl.className = 'value';
+  if (s.max_descent_deg > 55) nozzleEl.classList.add('descent-danger');
+  else if (s.max_descent_deg > 45) nozzleEl.classList.add('descent-warn');
+}
+
+// ── Download ────────────────────────────────────────────────────
+
+dlBtn.addEventListener('click', function() {
+  if (!currentGcode) return;
+  const shapeName = stlFile
+    ? stlFile.name.replace(/\.stl$/i, '')
+    : document.getElementById('shape').value;
+  const filename = 'bouncy_' + shapeName + '.gcode';
+  const blob = new Blob([currentGcode], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+// ── Shape Visibility ────────────────────────────────────────────
+
+function updateShapeVisibility() {
+  const shape = document.getElementById('shape').value;
+  const hasSTL = stlFile !== null;
+  document.getElementById('radius-group').style.display =
+    (!hasSTL && shape === 'cylinder') ? '' : 'none';
+  document.getElementById('side-group').style.display =
+    (!hasSTL && shape === 'box') ? '' : 'none';
+  document.getElementById('circumradius-group').style.display =
+    (!hasSTL && ['pentagon', 'hexagon', 'polygon'].includes(shape)) ? '' : 'none';
+  document.getElementById('polygon-sides-group').style.display =
+    (!hasSTL && shape === 'polygon') ? '' : 'none';
+  document.getElementById('height-group').style.display = hasSTL ? 'none' : '';
+  document.getElementById('stl-scale-group').style.display = hasSTL ? '' : 'none';
+}
+
+document.getElementById('shape').addEventListener('change', updateShapeVisibility);
+updateShapeVisibility();
+
+// ── Range <-> Number sync ───────────────────────────────────────
+
+function syncRange(rangeId, numberId) {
+  const r = document.getElementById(rangeId);
+  const n = document.getElementById(numberId);
+  r.addEventListener('input', () => { n.value = r.value; });
+  n.addEventListener('input', () => { r.value = n.value; });
+}
+syncRange('radius_range', 'radius');
+syncRange('side_range', 'side');
+syncRange('circumradius_range', 'circumradius');
+syncRange('polygon_sides_range', 'polygon_sides');
+syncRange('height_range', 'height');
+syncRange('num_arches_range', 'num_arches');
+syncRange('arch_layer_height_range', 'arch_layer_height');
+syncRange('segments_per_arc_range', 'segments_per_arc');
+syncRange('stl_scale_range', 'stl_scale');
+
+// ── STL Upload ──────────────────────────────────────────────────
+
+document.getElementById('stl-upload-btn').addEventListener('click', () => {
+  document.getElementById('stl-file').click();
+});
+
+document.getElementById('stl-file').addEventListener('change', function() {
+  if (this.files[0]) loadSTL(this.files[0]);
+});
+
+document.getElementById('stl-clear-btn').addEventListener('click', clearSTL);
+
+function loadSTL(file) {
+  stlFile = file;
+  const reader = new FileReader();
+  reader.onload = () => {
+    stlArrayBuffer = reader.result;
+    document.getElementById('stl-name').textContent = file.name;
+    document.getElementById('stl-info').style.display = '';
+    document.getElementById('stl-upload-btn').style.display = 'none';
+    document.getElementById('shape').disabled = true;
+    updateShapeVisibility();
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function clearSTL() {
+  stlFile = null;
+  stlArrayBuffer = null;
+  document.getElementById('stl-info').style.display = 'none';
+  document.getElementById('stl-upload-btn').style.display = '';
+  document.getElementById('stl-file').value = '';
+  document.getElementById('shape').disabled = false;
+  updateShapeVisibility();
+}
+
+// Drag & drop
+let dragCounter = 0;
+viewportEl.addEventListener('dragenter', (e) => {
+  e.preventDefault();
+  dragCounter++;
+  if (dragCounter === 1) document.getElementById('drop-overlay').classList.remove('hidden');
+});
+viewportEl.addEventListener('dragover', (e) => { e.preventDefault(); });
+viewportEl.addEventListener('dragleave', () => {
+  dragCounter--;
+  if (dragCounter === 0) document.getElementById('drop-overlay').classList.add('hidden');
+});
+viewportEl.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dragCounter = 0;
+  document.getElementById('drop-overlay').classList.add('hidden');
+  const file = e.dataTransfer.files[0];
+  if (file && file.name.toLowerCase().endsWith('.stl')) loadSTL(file);
+});
+
+  </script>
+</body>
+</html>
