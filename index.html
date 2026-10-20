@@ -1243,7 +1243,8 @@ function loadSTL(file) {
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const stlBuffer = objToBinarySTL(new TextDecoder().decode(reader.result));
+        // reader.result is already a text string when using readAsText
+        const stlBuffer = objToBinarySTL(reader.result);
         stlArrayBuffer = stlBuffer.buffer;
         // Rename so the Python slicer sees a .stl file path.
         stlFile = new File([stlBuffer], file.name.replace(/\.obj$/i, '') + '.stl', { type: 'application/octet-stream' });

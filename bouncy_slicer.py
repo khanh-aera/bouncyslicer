@@ -312,36 +312,39 @@ def parse_stl(path):
     return tris
 
 
-def _subdivide_mesh(tris, max_edge=5.0):
-    """Subdivide triangles until no edge exceeds max_edge length."""
-    result = list(tris)
-    changed = True
-    while changed:
-        changed = False
-        new_result = []
-        for v1, v2, v3 in result:
-            e0 = math.sqrt((v2[0]-v1[0])**2 + (v2[1]-v1[1])**2 + (v2[2]-v1[2])**2)
-            e1 = math.sqrt((v3[0]-v2[0])**2 + (v3[1]-v2[1])**2 + (v3[2]-v2[2])**2)
-            e2 = math.sqrt((v1[0]-v3[0])**2 + (v1[1]-v3[1])**2 + (v1[2]-v3[2])**2)
-            longest = max(e0, e1, e2)
-            if longest <= max_edge:
-                new_result.append((v1, v2, v3))
-                continue
-            changed = True
-            if e0 >= e1 and e0 >= e2:  # split v1-v2
-                mid = ((v1[0]+v2[0])/2, (v1[1]+v2[1])/2, (v1[2]+v2[2])/2)
-                new_result.append((v1, mid, v3))
-                new_result.append((mid, v2, v3))
-            elif e1 >= e2:  # split v2-v3
-                mid = ((v2[0]+v3[0])/2, (v2[1]+v3[1])/2, (v2[2]+v3[2])/2)
-                new_result.append((v1, v2, mid))
-                new_result.append((v1, mid, v3))
-            else:  # split v3-v1
-                mid = ((v3[0]+v1[0])/2, (v3[1]+v1[1])/2, (v3[2]+v1[2])/2)
-                new_result.append((v1, v2, mid))
-                new_result.append((mid, v2, v3))
-        result = new_result
-    return result
+def _subdivide_mesh(tris, max_edge=5.0, max_tris=800000):
+    """Subdivide triangles until no edge exceeds max_edge length.
+
+    Iterative work-stack version with a hard triangle budget so dense
+    source meshes cannot exhaust Pyodide memory (MemoryError guard)."""
+    work = list(tris)
+    out = []
+    while work:
+        if len(out) + len(work) >= max_tris:
+            # Budget exhausted: accept remaining triangles unsplit.
+            out.extend(work)
+            break
+        v1, v2, v3 = work.pop()
+        e0 = math.sqrt((v2[0]-v1[0])**2 + (v2[1]-v1[1])**2 + (v2[2]-v1[2])**2)
+        e1 = math.sqrt((v3[0]-v2[0])**2 + (v3[1]-v2[1])**2 + (v3[2]-v2[2])**2)
+        e2 = math.sqrt((v1[0]-v3[0])**2 + (v1[1]-v3[1])**2 + (v1[2]-v3[2])**2)
+        longest = max(e0, e1, e2)
+        if longest <= max_edge:
+            out.append((v1, v2, v3))
+            continue
+        if e0 >= e1 and e0 >= e2:  # split v1-v2
+            mid = ((v1[0]+v2[0])/2, (v1[1]+v2[1])/2, (v1[2]+v2[2])/2)
+            work.append((v1, mid, v3))
+            work.append((mid, v2, v3))
+        elif e1 >= e2:  # split v2-v3
+            mid = ((v2[0]+v3[0])/2, (v2[1]+v3[1])/2, (v2[2]+v3[2])/2)
+            work.append((v1, v2, mid))
+            work.append((v1, mid, v3))
+        else:  # split v3-v1
+            mid = ((v3[0]+v1[0])/2, (v3[1]+v1[1])/2, (v1[2]+v3[2])/2)
+            work.append((v1, v2, mid))
+            work.append((mid, v2, v3))
+    return out
 
 
 def slice_mesh(tris, z):
