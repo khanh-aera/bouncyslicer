@@ -329,6 +329,13 @@ textarea.gcode-input:focus { outline: 1px solid var(--accent); border-color: var
     <h1>Bouncy Slicer</h1>
     <span class="subtitle">Arch Vase Mode</span>
     <span class="spacer"></span>
+    <label style="font-size:12px;color:var(--text-dim)">Printer</label>
+    <select id="printer-preset" style="padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px">
+      <option value="custom">Custom</option>
+      <option value="a1">Bambu Lab A1</option>
+      <option value="a1_mini">Bambu Lab A1 mini</option>
+      <option value="p1s">Bambu Lab P1S (AMS)</option>
+    </select>
     <button id="download-btn" disabled>Download G-code</button>
   </header>
 
@@ -351,8 +358,8 @@ textarea.gcode-input:focus { outline: 1px solid var(--accent); border-color: var
           <div class="param">
             <label>STL File</label>
             <div class="stl-row">
-              <input type="file" id="stl-file" accept=".stl" style="display:none">
-              <button id="stl-upload-btn" class="secondary-btn">Upload STL</button>
+              <input type="file" id="stl-file" accept=".stl,.obj" style="display:none">
+              <button id="stl-upload-btn" class="secondary-btn">Upload STL / OBJ</button>
               <div id="stl-info" class="stl-info" style="display:none">
                 <span id="stl-name"></span>
                 <button id="stl-clear-btn" class="icon-btn">&times;</button>
@@ -575,7 +582,7 @@ M84 ; disable steppers</textarea>
       </div>
 
       <div id="drop-overlay" class="drop-overlay hidden">
-        <p>Drop STL file here</p>
+        <p>Drop STL / OBJ file here</p>
       </div>
     </div>
   </main>
@@ -1098,6 +1105,123 @@ syncRange('arch_layer_height_range', 'arch_layer_height');
 syncRange('segments_per_arc_range', 'segments_per_arc');
 syncRange('stl_scale_range', 'stl_scale');
 
+// ── Printer Presets (Bambu Lab fleet) ───────────────────────────
+// Values follow Bambu Studio defaults for PLA on the textured PEI plate.
+const PRINTER_PRESETS = {
+  a1: {
+    label: 'Bambu Lab A1',
+    bed_x: 256, bed_y: 256, bed_temp: 65, hotend_temp: 220,
+    nozzle_diameter: 0.4, filament_diameter: 1.75,
+    print_speed: 3000, first_layer_speed: 500, travel_speed: 20000,
+    retract_distance: 0.8, retract_speed: 2400, z_hop: 0.4, bead_height: 0.2,
+    start_gcode:
+`M73.2 P0 ; purge done outside machine
+G90 ; absolute positioning
+M82 ; absolute extrusion
+M107 ; fan off during warmup
+M104 S{hotend_temp} ; set hotend temp
+M140 S{bed_temp} ; set bed temp
+M190 S{bed_temp} ; wait for bed
+M109 S{hotend_temp} ; wait for hotend
+G28 ; home all axes
+G21 ; mm units
+G92 E0 ; reset extruder`,
+    end_gcode:
+`M104 S0 ; hotend off
+M140 S0 ; bed off
+M107 ; fan off
+M106 S0 ; light off
+G91 ; relative positioning
+G0 Z10 F3000 ; lift nozzle
+G90 ; absolute positioning
+G0 X256 Y256 F{travel_speed} ; present part
+M84 ; disable steppers`
+  },
+  a1_mini: {
+    label: 'Bambu Lab A1 mini',
+    bed_x: 180, bed_y: 180, bed_temp: 65, hotend_temp: 220,
+    nozzle_diameter: 0.4, filament_diameter: 1.75,
+    print_speed: 3000, first_layer_speed: 500, travel_speed: 20000,
+    retract_distance: 0.8, retract_speed: 2400, z_hop: 0.4, bead_height: 0.2,
+    start_gcode:
+`M73.2 P0 ; purge done outside machine
+G90 ; absolute positioning
+M82 ; absolute extrusion
+M107 ; fan off during warmup
+M104 S{hotend_temp} ; set hotend temp
+M140 S{bed_temp} ; set bed temp
+M190 S{bed_temp} ; wait for bed
+M109 S{hotend_temp} ; wait for hotend
+G28 ; home all axes
+G21 ; mm units
+G92 E0 ; reset extruder`,
+    end_gcode:
+`M104 S0 ; hotend off
+M140 S0 ; bed off
+M107 ; fan off
+M106 S0 ; light off
+G91 ; relative positioning
+G0 Z10 F3000 ; lift nozzle
+G90 ; absolute positioning
+G0 X180 Y180 F{travel_speed} ; present part
+M84 ; disable steppers`
+  },
+  p1s: {
+    label: 'Bambu Lab P1S (AMS)',
+    bed_x: 256, bed_y: 256, bed_temp: 65, hotend_temp: 220,
+    nozzle_diameter: 0.4, filament_diameter: 1.75,
+    print_speed: 3000, first_layer_speed: 500, travel_speed: 20000,
+    retract_distance: 0.8, retract_speed: 2400, z_hop: 0.4, bead_height: 0.2,
+    start_gcode:
+`; ===== Bambu P1S — purge via external wiper, AMS feed =====
+M1002 set_gcode_claim_speed_level : 5 ; speed level marker
+G90 ; absolute positioning
+M82 ; absolute extrusion
+M104 S{hotend_temp} ; set hotend temp
+M140 S{bed_temp} ; set bed temp
+M190 S{bed_temp} ; wait for bed
+M109 S{hotend_temp} ; wait for hotend
+G28 ; home all axes
+G21 ; mm units
+G92 E0 ; reset extruder
+; AMS: first load happens from the filament menu; AMS iterates purge via chute wipe`,
+    end_gcode:
+`M104 S0 ; hotend off
+M140 S0 ; bed off
+M107 ; fan off
+M106 S0 ; light off
+G91 ; relative positioning
+G0 Z10 F3000 ; lift nozzle
+G90 ; absolute positioning
+G0 X256 Y256 F{travel_speed} ; present part
+M620 S255 ; AMS park filament (safe no-op if unmatched)
+M400 ; wait
+M84 ; disable steppers`
+  }
+};
+
+function applyPreset(key) {
+  const p = PRINTER_PRESETS[key];
+  if (!p) return; // custom — leave fields as-is
+  const set = (id, v) => {
+    const el = document.getElementById(id);
+    if (el) el.value = v;
+  };
+  set('bed_x', p.bed_x); set('bed_y', p.bed_y);
+  set('bed_temp', p.bed_temp); set('hotend_temp', p.hotend_temp);
+  set('nozzle_diameter', p.nozzle_diameter); set('filament_diameter', p.filament_diameter);
+  set('print_speed', p.print_speed); set('first_layer_speed', p.first_layer_speed);
+  set('travel_speed', p.travel_speed);
+  set('retract_distance', p.retract_distance); set('retract_speed', p.retract_speed);
+  set('z_hop', p.z_hop); set('bead_height', p.bead_height);
+  set('start_gcode', p.start_gcode);
+  set('end_gcode', p.end_gcode);
+}
+
+document.getElementById('printer-preset').addEventListener('change', function() {
+  if (this.value !== 'custom') applyPreset(this.value);
+});
+
 // ── STL Upload ──────────────────────────────────────────────────
 
 document.getElementById('stl-upload-btn').addEventListener('click', () => {
@@ -1112,6 +1236,31 @@ document.getElementById('stl-clear-btn').addEventListener('click', clearSTL);
 
 function loadSTL(file) {
   stlFile = file;
+  const lower = file.name.toLowerCase();
+
+  // OBJ support: convert to binary STL in the browser, then feed the same path.
+  if (lower.endsWith('.obj')) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const stlBuffer = objToBinarySTL(new TextDecoder().decode(reader.result));
+        stlArrayBuffer = stlBuffer.buffer;
+        // Rename so the Python slicer sees a .stl file path.
+        stlFile = new File([stlBuffer], file.name.replace(/\.obj$/i, '') + '.stl', { type: 'application/octet-stream' });
+        document.getElementById('stl-name').textContent = file.name + ' (converted to STL)';
+        document.getElementById('stl-info').style.display = '';
+        document.getElementById('stl-upload-btn').style.display = 'none';
+        document.getElementById('shape').disabled = true;
+        updateShapeVisibility();
+      } catch (err) {
+        alert('Could not read OBJ file: ' + err.message);
+        clearSTL();
+      }
+    };
+    reader.readAsText(file);
+    return;
+  }
+
   const reader = new FileReader();
   reader.onload = () => {
     stlArrayBuffer = reader.result;
@@ -1122,6 +1271,56 @@ function loadSTL(file) {
     updateShapeVisibility();
   };
   reader.readAsArrayBuffer(file);
+}
+
+// ── OBJ → binary STL conversion (triangulate faces, no external lib) ──
+function objToBinarySTL(objText) {
+  const verts = [];
+  const tris = [];
+  for (const raw of objText.split('\n')) {
+    const line = raw.trim();
+    if (line.startsWith('v ')) {
+      const p = line.split(/\s+/);
+      verts.push([parseFloat(p[1]), parseFloat(p[2]), parseFloat(p[3])]);
+    } else if (line.startsWith('f ')) {
+      // Faces: "f 1 2 3", "f 1/4 2/5 3/6", "f 1//7 2//8 3//9", quads/ngons too.
+      const idx = line.slice(2).trim().split(/\s+/).map(tok => {
+        let i = parseInt(tok.split('/')[0], 10);
+        if (isNaN(i)) return null;
+        return i > 0 ? i - 1 : verts.length + i; // negative = relative from end
+      });
+      // Fan-triangulate the polygon (OBJ faces are planar by spec).
+      for (let k = 1; k + 1 < idx.length; k++) {
+        const a = idx[0], b = idx[k], c = idx[k + 1];
+        if (a == null || b == null || c == null) continue;
+        if (a >= verts.length || b >= verts.length || c >= verts.length || a < 0 || b < 0 || c < 0) continue;
+        tris.push([verts[a], verts[b], verts[c]]);
+      }
+    }
+  }
+  if (!tris.length) throw new Error('no faces found (is this a valid OBJ?)');
+
+  // Write binary STL: 80-byte header + uint32 count + 50 bytes per tri.
+  const buf = new ArrayBuffer(84 + tris.length * 50);
+  const dv = new DataView(buf);
+  const header = 'converted from OBJ by Bouncy Slicer';
+  for (let i = 0; i < header.length && i < 80; i++) dv.setUint8(i, header.charCodeAt(i));
+  dv.setUint32(80, tris.length, true);
+  let off = 84;
+  for (const [v1, v2, v3] of tris) {
+    // Normal via cross product (unnormalized is accepted by most parsers).
+    const ux = v2[0]-v1[0], uy = v2[1]-v1[1], uz = v2[2]-v1[2];
+    const wx = v3[0]-v1[0], wy = v3[1]-v1[1], wz = v3[2]-v1[2];
+    let nx = uy*wz - uz*wy, ny = uz*wx - ux*wz, nz = ux*wy - uy*wx;
+    const len = Math.hypot(nx, ny, nz) || 1;
+    nx/=len; ny/=len; nz/=len;
+    dv.setFloat32(off, nx, true); dv.setFloat32(off+4, ny, true); dv.setFloat32(off+8, nz, true); off += 12;
+    for (const v of [v1, v2, v3]) {
+      dv.setFloat32(off, v[0], true); dv.setFloat32(off+4, v[1], true); dv.setFloat32(off+8, v[2], true); off += 12;
+    }
+    dv.setUint16(off, 0, true); off += 2;
+  }
+  return new Uint8Array(buf);
 }
 
 function clearSTL() {
@@ -1151,7 +1350,7 @@ viewportEl.addEventListener('drop', (e) => {
   dragCounter = 0;
   document.getElementById('drop-overlay').classList.add('hidden');
   const file = e.dataTransfer.files[0];
-  if (file && file.name.toLowerCase().endsWith('.stl')) loadSTL(file);
+  if (file && /\.(stl|obj)$/i.test(file.name)) loadSTL(file);
 });
 
   </script>
